@@ -2,6 +2,8 @@
 
 > Ask questions about any public GitHub repository in plain English and get accurate, grounded answers with source citations — powered by Claude Sonnet, ChromaDB, and a two-stage RAG pipeline.
 
+![Codebase Intelligence Demo](docs/assets/demo.gif)
+
 ---
 
 ## What is this?
@@ -21,6 +23,28 @@ No hallucinations about code that doesn't exist. No vague summaries. Just ground
 **Repo:** [github.com/ShivaShanmukh/Mark-42-](https://github.com/ShivaShanmukh/Mark-42-)
 
 Default example pre-loaded: [ShivaShanmukh/Job-Agent](https://github.com/ShivaShanmukh/Job-Agent)
+
+---
+
+## Screenshots
+
+### Landing — paste any GitHub URL and index it
+![Landing screen](docs/assets/01-landing.png)
+
+### Indexing in progress
+![Indexing](docs/assets/02-indexing.png)
+
+### Repo indexed — 41 chunks ready to query
+![Indexed](docs/assets/03-indexed.png)
+
+### Ask a question in natural language
+![Typing a query](docs/assets/04-typing.png)
+
+### Answer streaming token by token
+![Streaming answer](docs/assets/05-streaming.png)
+
+### Full answer with source citations
+![Answer with citations](docs/assets/06-answer-with-citations.png)
 
 ---
 
