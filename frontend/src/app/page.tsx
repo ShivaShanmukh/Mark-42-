@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "/api";
 const DEFAULT_REPO_URL = "https://github.com/ShivaShanmukh/Job-Agent";
 
 interface Message {
