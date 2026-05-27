@@ -1,7 +1,8 @@
 {
-  "$schema": "https://railway.app/railway.schema.json",
+  "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "nixpacks"
+    "builder": "RAILPACK",
+    "buildCommand": "python3 -c \"from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('all-MiniLM-L6-v2'); CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')\""
   },
   "deploy": {
     "startCommand": "uvicorn main:app --host 0.0.0.0 --port $PORT",
