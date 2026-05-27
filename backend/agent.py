@@ -15,7 +15,7 @@ SYSTEM_PROMPT = (
     "Always cite which file your answer comes from."
 )
 
-MODEL = "claude-sonnet-4-20250514"
+MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 
 
 def _build_context_block(chunks: list[dict]) -> str:

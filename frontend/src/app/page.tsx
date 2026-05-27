@@ -88,34 +88,50 @@ export default function Home() {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let citations: string[] = [];
+      // Buffer incomplete lines across network chunks
+      let lineBuffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const text = decoder.decode(value);
-        const lines = text.split("\n");
+        lineBuffer += decoder.decode(value, { stream: true });
+        const lines = lineBuffer.split("\n");
+        // Keep the last (potentially incomplete) line in the buffer
+        lineBuffer = lines.pop() ?? "";
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const payload = JSON.parse(line.slice(6));
-              if (payload.type === "token") {
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  const last = updated[updated.length - 1];
-                  if (last.role === "assistant") {
-                    updated[updated.length - 1] = { ...last, content: last.content + payload.content };
-                  }
-                  return updated;
-                });
-              } else if (payload.type === "citations") {
-                citations = payload.files;
-              }
-            } catch {
-              // skip malformed SSE frames
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const payload = JSON.parse(line.slice(6));
+            if (payload.type === "token") {
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last.role === "assistant") {
+                  updated[updated.length - 1] = { ...last, content: last.content + payload.content };
+                }
+                return updated;
+              });
+            } else if (payload.type === "citations") {
+              citations = payload.files;
+            } else if (payload.type === "error") {
+              throw new Error(payload.content);
             }
+          } catch (parseErr) {
+            if (parseErr instanceof SyntaxError) continue; // skip genuinely malformed frames
+            throw parseErr;
           }
+        }
+      }
+
+      // Flush any remaining buffered line
+      if (lineBuffer.startsWith("data: ")) {
+        try {
+          const payload = JSON.parse(lineBuffer.slice(6));
+          if (payload.type === "citations") citations = payload.files;
+        } catch {
+          // ignore
         }
       }
 

@@ -1,10 +1,13 @@
 import json
 import os
+import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env")
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -14,11 +17,33 @@ from agent import answer
 from indexer import index_repo, list_indexed_repos
 from retriever import retrieve
 
-app = FastAPI(title="Codebase Intelligence", version="1.0.0")
+
+def _validate_env() -> None:
+    required = ["ANTHROPIC_API_KEY"]
+    missing = [k for k in required if not os.getenv(k)]
+    if missing:
+        print(f"[startup] FATAL: missing required env vars: {missing}", file=sys.stderr)
+        sys.exit(1)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _validate_env()
+    # Trigger model warm-up on startup so the first request isn't slow.
+    # Models are already cached in the build image; this just loads them into RAM.
+    from indexer import _embedder  # noqa: F401  warm up shared embedder
+    from retriever import _reranker  # noqa: F401  warm up reranker
+    yield
+
+
+app = FastAPI(title="Codebase Intelligence", version="1.0.0", lifespan=lifespan)
+
+_raw_origins = os.getenv("CORS_ORIGINS", "*")
+_origins: list[str] = [o.strip() for o in _raw_origins.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -36,7 +61,6 @@ class QueryRequest(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "Codebase Intelligence"}
-
 
 
 @app.get("/repos")

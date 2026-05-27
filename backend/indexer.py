@@ -16,7 +16,11 @@ EMBED_MODEL = "all-MiniLM-L6-v2"
 
 _encoder = tiktoken.get_encoding("cl100k_base")
 _embedder = SentenceTransformer(EMBED_MODEL)
-_chroma_client = chromadb.PersistentClient(path="./chroma_db")
+
+_default_chroma_path = str(Path(__file__).parent / "chroma_db")
+_chroma_client = chromadb.PersistentClient(
+    path=os.getenv("CHROMA_DB_PATH", _default_chroma_path)
+)
 
 
 def _tokenize(text: str) -> list[int]:
@@ -34,9 +38,7 @@ def _chunk_text(text: str, file_path: str) -> list[dict]:
         chunk_tokens = tokens[start:end]
         chunk_text = _encoder.decode(chunk_tokens)
 
-        # Estimate line range based on character position
         char_start = len(_encoder.decode(tokens[:start]))
-        char_end = char_start + len(chunk_text)
         lines_before = text[:char_start].count("\n")
         lines_in_chunk = chunk_text.count("\n")
 
@@ -58,7 +60,6 @@ def _walk_repo(repo_dir: str) -> Generator[tuple[str, str], None, None]:
     repo_path = Path(repo_dir)
     for file_path in repo_path.rglob("*"):
         if file_path.is_file() and file_path.suffix in SUPPORTED_EXTENSIONS:
-            # Skip hidden dirs and common noise
             parts = file_path.parts
             if any(p.startswith(".") for p in parts) or "node_modules" in parts:
                 continue
@@ -75,7 +76,6 @@ def index_repo(github_url: str) -> dict:
     repo_name = github_url.rstrip("/").split("/")[-1]
     collection_name = repo_name.replace("-", "_").replace(".", "_")[:63]
 
-    # Drop existing collection for fresh index
     try:
         _chroma_client.delete_collection(collection_name)
     except Exception:
@@ -89,7 +89,7 @@ def index_repo(github_url: str) -> dict:
     with tempfile.TemporaryDirectory() as tmpdir:
         Repo.clone_from(github_url, tmpdir, depth=1)
 
-        all_chunks = []
+        all_chunks: list[dict] = []
         for rel_path, content in _walk_repo(tmpdir):
             chunks = _chunk_text(content, rel_path)
             all_chunks.extend(chunks)
@@ -97,7 +97,6 @@ def index_repo(github_url: str) -> dict:
         if not all_chunks:
             return {"status": "error", "message": "No supported files found", "chunk_count": 0}
 
-        # Batch embed
         texts = [c["text"] for c in all_chunks]
         embeddings = _embedder.encode(texts, batch_size=64, show_progress_bar=False).tolist()
 

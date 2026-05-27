@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ["python312", "git"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+# Pre-download HuggingFace models during build so cold starts are instant
+[phases.build]
+cmds = [
+  "python -c \"from sentence_transformers import SentenceTransformer, CrossEncoder; SentenceTransformer('all-MiniLM-L6-v2'); CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2'); print('Models cached')\""
+]
+
+[start]
+cmd = "uvicorn main:app --host 0.0.0.0 --port $PORT"
