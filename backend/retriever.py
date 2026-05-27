@@ -11,11 +11,15 @@ TOP_K_RETURN = 5
 def retrieve(query: str, repo_name: str) -> list[dict]:
     collection = get_collection(repo_name)
 
+    count = collection.count()
+    if count == 0:
+        return []
+
     query_embedding = _embedder.encode([query]).tolist()[0]
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=min(TOP_K_RETRIEVE, collection.count()),
+        n_results=min(TOP_K_RETRIEVE, count),
         include=["documents", "metadatas", "distances"],
     )
 
