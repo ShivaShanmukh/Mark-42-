@@ -1,3 +1,10 @@
+# Force the CPU-only torch wheel (~190MB) instead of the default CUDA build (~2.7GB).
+# The full CUDA wheel blows past Railway's build image/memory limits -> build failure.
+# sentence-transformers pulls torch transitively; pinning it here resolves it from
+# the PyTorch CPU index before that happens.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 python-dotenv==1.0.1
